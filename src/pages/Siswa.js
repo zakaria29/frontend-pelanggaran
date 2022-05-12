@@ -4,7 +4,7 @@ import { Modal, Toast } from "bootstrap"
 export default function Siswa() {
     let [siswa, setSiswa] = useState([])
     let [idSiswa, setIDSiswa] = useState("")
-    let [nisn, setNISN] = useState(0)
+    let [nis, setNIS] = useState(0)
     let [nama, setNama] = useState("")
     let [kelas, setKelas] = useState("")
     let [poin, setPoin] = useState(0)
@@ -13,6 +13,7 @@ export default function Siswa() {
 
     let [message, setMessage] = useState("")
     let [modal, setModal] = useState(null)
+    let [uploadImage, setUploadImage] = useState(true)
 
     /** prepare token */
     let token = localStorage.getItem(`token-pelanggaran`)
@@ -55,12 +56,89 @@ export default function Siswa() {
 
         /** mengosongkan inputan */
         setIDSiswa(0)
-        setNISN(0)
+        setNIS(0)
         setNama("")
         setKelas("")
         setPoin(0)
         setImage(null)
         setAction("insert")
+        setUploadImage(true)
+    }
+
+    let editSiswa = item => {
+        /** open modal */
+        modal.show()
+
+        /** mengisi inputan sesuai dengan data dipilih */
+        setIDSiswa(item.id_siswa)
+        setNIS(item.nis)
+        setNama(item.nama)
+        setKelas(item.kelas)
+        setPoin(item.poin)
+        setAction("edit")
+        setImage(null)
+        setUploadImage(false)
+    }
+
+    let simpanSiswa = ev => {
+        ev.preventDefault()
+
+        /** close modal */
+        modal.hide()
+
+        if (action === `insert`) {
+            let endpoint = `http://localhost:8080/siswa`
+            let request = new FormData()
+            request.append(`nis`, nis)
+            request.append(`nama`, nama)
+            request.append(`kelas`, kelas)
+            request.append(`poin`, poin)
+            request.append(`image`, image)
+
+            /** sending data */
+            axios.post(endpoint, request, authorization)
+            .then(response => {
+                showToast(response.data.message)
+                /** refresh newest data */
+                getData()
+            })
+            .catch(error => console.log(error))
+
+        } else if (action === `edit`){
+            let endpoint = `http://localhost:8080/siswa/${idSiswa}`
+            let request = new FormData()
+            request.append(`nis`, nis)
+            request.append(`nama`, nama)
+            request.append(`kelas`, kelas)
+            request.append(`poin`, poin)
+            
+            if (uploadImage === true) {
+                request.append(`image`, image)
+            }
+
+            /** sending data */
+            axios.put(endpoint, request, authorization)
+                .then(response => {
+                    showToast(response.data.message)
+                    /** refresh newest data */
+                    getData()
+                })
+                .catch(error => console.log(error))
+        }
+    }
+
+    let hapusSiswa = item => {
+        if (window.confirm(`Really you want to delete this item?`)) {
+            let endpoint = `http://localhost:8080/siswa/${item.id_siswa}`
+            /** sending data */
+            axios.delete(endpoint, authorization)
+                .then(response => {
+                    showToast(response.data.message)
+                    /** refresh newest data */
+                    getData()
+                })
+                .catch(error => console.log(error))       
+        }
     }
 
     useEffect(() => {
@@ -118,10 +196,12 @@ export default function Siswa() {
                                         <h5>{item.poin}</h5>
                                         <small className="text-info">Options</small>
                                         <br />
-                                        <button className="btn btn-info btn-sm m-2">
+                                        <button className="btn btn-info btn-sm m-2"
+                                        onClick={() => editSiswa(item)}>
                                             Edit
                                         </button>
-                                        <button className="btn btn-danger btn-sm m-2">
+                                        <button className="btn btn-danger btn-sm m-2"
+                                        onClick={() => hapusSiswa(item)}>
                                             Hapus
                                         </button>
 
@@ -147,14 +227,14 @@ export default function Siswa() {
                                     </h4>
                                 </div>
                                 <div className="modal-body">
-                                    <form>
-                                        {/* input for nisn */}
-                                        NISN
+                                    <form onSubmit={(ev) => simpanSiswa(ev)}>
+                                        {/* input for nis */}
+                                        NIS
                                         <input type="number"
                                             className="form-control mb-2"
                                             required
-                                            value={nisn}
-                                            onChange={ev => setNISN(ev.target.value)} />
+                                            value={nis}
+                                            onChange={ev => setNIS(ev.target.value)} />
 
                                         {/* input for nama */}
                                         Nama
@@ -183,10 +263,19 @@ export default function Siswa() {
                                         {/* input for image */}
                                         Gambar
                                         <input type="file"
-                                            className="form-control mb-2"
-                                            required
+                                            className={`form-control mb-2 ${uploadImage ? `` : `d-none`}`}
+                                            required = {uploadImage}
                                             accept="image/jpg"
                                             onChange={ev => setImage(ev.target.files[0])} />
+
+                                        <button
+                                        type="button"
+                                        onClick={() => setUploadImage(true)}
+                                        className={`btn btn-dark btn-sm ${uploadImage ? `d-none` : ``}`}>
+                                            Click to re-upload image
+                                        </button>
+
+                                        <br />
 
                                         {/* Button for submit */}
                                         <button type="submit" className="btn btn-success">

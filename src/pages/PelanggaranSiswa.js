@@ -1,63 +1,167 @@
-import axios from "axios"
 import { useState, useEffect } from "react"
+import axios from "axios"
 export default function PelanggaranSiswa() {
+    let [siswa, setSiswa] = useState([])
     let [pelanggaran, setPelanggaran] = useState([])
+    let [selectedSiswa, setSelectedSiswa] = useState("")
+    let [selectedDate, setSelectedDate] = useState("")
     let [selectedPelanggaran, setSelectedPelanggaran] = useState([])
+
     let token = localStorage.getItem(`token-pelanggaran`)
     let authorization = {
         headers: {
             Authorization: `Bearer ${token}`
         }
     }
-    let getPelanggaran = () => {
-        let endpoint = `http://localhost:8080/pelanggaran`
+
+    let getSiswa = () => {
+        let endpoint = `http://localhost:8080/siswa`
         axios.get(endpoint, authorization)
-            .then(response => {
-                setPelanggaran(response.data)
+            .then(result => {
+                // store data to state siswa
+                setSiswa(result.data)
             })
             .catch(error => console.log(error))
     }
 
-    let handleCheckbox = (id) => {
+    let getPelanggaran = () => {
+        let endpoint = `http://localhost:8080/pelanggaran`
+        axios.get(endpoint, authorization)
+            .then(result => {
+                // store data to state pelanggaran
+                setPelanggaran(result.data)
+            })
+            .catch(error => console.log(error))
+    }
+
+    let addPelanggaran = (id_pelanggaran) => {
+        // cek keberadaan id_pelanggaran di dalam 
+        // selectedPelanggaran
         let temp = [...selectedPelanggaran]
-        let found = temp.find(item => item.id_pelanggaran === id)
+        let found = temp.find(
+            item => item.id_pelanggaran === id_pelanggaran
+        )
+
+        // jika ditemukan data yg sama, maka dihapus
+        // jika tidak menemukan, maka ditambahkan
         if (found) {
-            let index = temp.findIndex(item => item === found)
+            let index = temp.findIndex(
+                item => item.id_pelanggaran === id_pelanggaran
+            )
             temp.splice(index, 1)
         } else {
+            // memasukkan id Pelanggaran yg dipilih
+            // ke selectedPelanggaran
             temp.push({
-                id_pelanggaran: id
+                id_pelanggaran: id_pelanggaran
             })
         }
+
         setSelectedPelanggaran(temp)
+    }
+
+    let simpanPelanggaranSiswa = () => {
+        if (window.confirm(`Are you sure want to save this data?`)) {
+            // ambil dulu id user dari localstorage
+            let user = JSON.parse(localStorage.getItem(`user-pelanggaran`))
+            let id = user.id_user
+
+            let endpoint = `http://localhost:8080/pelanggaran_siswa`
+            let request = {
+                waktu: selectedDate,
+                id_user: id,
+                id_siswa: selectedSiswa,
+                detail_pelanggaran_siswa: selectedPelanggaran
+            }
+
+            /** sending data */
+            axios.post(endpoint, request, authorization)
+                .then(result => {
+                    alert(result.data.message)
+                })
+                .catch(error => console.log(error))
+        }
 
     }
 
     useEffect(() => {
+        getSiswa()
         getPelanggaran()
-    }, []);
+    }, [])
+
     return (
         <div className="container-fluid">
-            Selected ID:
-            {selectedPelanggaran.map(item => (
-                <span className="mx-2" key={`keyID${item.id_pelanggaran}`}>
-                    {item.id_pelanggaran}
-                </span>
-            ))}
-            <div className="row">
-                {pelanggaran.map(item => (
-                    <div className="col-4" key={`key${item.id_pelanggaran}`}>
-                        <div className="mb-2 p-2"
-                            style={{ border: `1px solid black`, borderRadius:`5px`}}>
-                            <input type="checkbox" className="form-check-input me-2"
-                                value={item.id_pelanggaran}
-                                onClick={() => handleCheckbox(item.id_pelanggaran)} />
-                            <strong>{item.nama_pelanggaran}</strong>
+            <div className="card">
+                <div className="card-header"
+                    style={{ background: `orange` }}>
+                    <h4 className="text-white">
+                        Form Pelanggaran Siswa
+                    </h4>
+                </div>
+
+                <div className="card-body">
+                    <div className="row">
+                        <div className="col-2">
+                            Pilih Siswa
+                        </div>
+                        <div className="col-10">
+                            <select
+                                className="form-control"
+                                onChange={ev => setSelectedSiswa(ev.target.value)}
+                                value={selectedSiswa}>
+                                <option value="">
+                                    --- List Siswa ---
+                                </option>
+                                {siswa.map(item => (
+                                    <option
+                                        value={item.id_siswa}
+                                        key={`key${item.id_siswa}`}>
+                                        {item.nama}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="col-2 my-2">
+                            Tgl Pelanggaran
+                        </div>
+                        <div className="col-10 my-2">
+                            <input type="date"
+                                className="form-control"
+                                onChange={ev => setSelectedDate(ev.target.value)}
+                                value={selectedDate}
+                            />
+                        </div>
+                        <div className="col-2 my-2">
+                            Pilih Pelanggaran
+                        </div>
+                        <div className="col-10 my-2">
+                            {pelanggaran.map(item => (
+                                <div
+                                    key={`ppp${item.id_pelanggaran}`}
+                                >
+                                    <input
+                                        className="me-2"
+                                        type={"checkbox"}
+                                        value={item.id_pelanggaran}
+                                        onClick={() => addPelanggaran(item.id_pelanggaran)}
+                                    />
+                                    {item.nama_pelanggaran}
+                                </div>
+                            ))}
                         </div>
                     </div>
-                ))}
-            </div>
 
+                    <button
+                        className="btn btn-info"
+                        onClick={() => simpanPelanggaranSiswa()}>
+                        <span className="fa fa-check"></span> Simpan
+                    </button>
+
+                    {/* isi dari selected Siswa: {selectedSiswa} <br />
+                    isi dari selected Date: {selectedDate} <br />
+                    isi dari selected pelanggaran: {selectedPelanggaran.map(item => `${item.id_pelanggaran},`)} */}
+                </div>
+            </div>
         </div>
     )
 }
